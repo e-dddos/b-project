@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+// Set the max room size
 #define MAXLENGTH 5
 #define MAXWIDTH 5
 
@@ -26,29 +27,34 @@ struct Robot
 
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot);
 void move_forward(struct Robot *myrobot);
+void turn_right(struct Robot *myrobot);
+void turn_left(struct Robot *myrobot);
 void print_coordinates(struct Robot *myrobot);
 
 int main()
 {
     // create a room array:
-    bool room[MAXLENGTH][MAXWIDTH]; // Set the max room size
+    bool room[MAXLENGTH][MAXWIDTH]; 
     struct Robot myrobot;
     // Start position:
     myrobot.x_pos = 0;
     myrobot.y_pos = 0;
     myrobot.direction = 0;
-    for (int x = 0; x < 10; x++)
+    for (int x = 0; x < MAXLENGTH; x++)
     { // First, all fields are closed and we're going to open them while going through them
-        for (int y = 0; y < 10; y++)
+        for (int y = 0; y < MAXWIDTH; y++)
         {
             room[y][x] = false;
         }
     }
     // We assume that we always begin at 0,0 coordinates, and this field is of course free
-    room[0][0] = true;
+    room[myrobot.x_pos][myrobot.y_pos] = true;
 
     print_coordinates(&myrobot);
     get_free_directions_from_Nils_sensors(&myrobot);
+    //We'll try to go zigzag every line of the grid:
+
+    //While no obstacle in front:
     while (myrobot.free_directions[0] == true)
     {
         move_forward(&myrobot);
@@ -59,9 +65,9 @@ int main()
     return 0;
 }
 
+//The function will be replaced by Nils' function, for now just for virtual testing:
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
 {
-    //For debugging without an actual robot and room, there's our virtual room:
     bool room[MAXLENGTH][MAXWIDTH] = {
         {true, false, true, true, true},
         {true, true, true, true, true},
@@ -69,7 +75,14 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
         {false, true, true, true, true},
         {true, true, true, true, true},
     };
-
+        for (int x = 0; x < MAXLENGTH; x++)
+    { // First, all fields are closed and we're going to open them while going through them
+        for (int y = 0; y < MAXWIDTH; y++)
+        {
+            printf("%d", room[y][x]);
+        }
+        printf("\n");
+    }
     if (myrobot->x_pos + 1 > 4) // Check if the next field forward exists
         myrobot->free_directions[0] = false;
     else
@@ -117,4 +130,21 @@ void move_forward(struct Robot *myrobot)
 void print_coordinates(struct Robot *myrobot)
 {
     printf("x: %d\ny: %d\ndir: %d\n", myrobot->x_pos, myrobot->y_pos, myrobot->direction);
+}
+
+void turn_right(struct Robot *myrobot) {
+    if (myrobot->direction == 3)
+        myrobot->direction = 0;
+    else
+        myrobot->direction++;   
+    // physical_turn_right_func_from_Peter_and_Michael();
+
+        }
+
+void turn_left(struct Robot *myrobot) {
+    if (myrobot->direction == 0)
+        myrobot->direction = 3;
+    else
+        myrobot->direction--;
+    // physical_turn_left_func_from_Peter_and_Michael();
 }
