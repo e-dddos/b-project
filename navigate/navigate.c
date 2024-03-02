@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 // Set the max room size
-#define MAXLENGTH 10
-#define MAXWIDTH 10
+#define MAXLENGTH 12
+#define MAXWIDTH 12
 
 struct Robot
 {
@@ -23,20 +23,23 @@ struct Robot
     free_directions[2] - back
     free_directions[3] - to the left   */
     bool free_directions[4];
+    uint8_t best_directions[4];
+
     // create a room array:
-    bool room[MAXLENGTH][MAXWIDTH];
+    uint8_t room[MAXLENGTH][MAXWIDTH];
     uint8_t fields_visited;
     bool cant_move;
 };
 void robot_init(struct Robot *myrobot);
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot);
+void get_best_directions(struct Robot *myrobot);
 void move_forward(struct Robot *myrobot);
 void turn_right(struct Robot *myrobot);
 void turn_left(struct Robot *myrobot);
 void set_field_visited(struct Robot *myrobot);
-void print_coordinates(struct Robot *myrobot);
-void print_room(bool room[MAXLENGTH][MAXWIDTH]);
+void print_room(struct Robot *myrobot);
 void go_go_spiral(struct Robot *myrobot);
+uint8_t find_min_index(uint8_t arr[], uint8_t size);
 
 
 int main()
@@ -45,43 +48,57 @@ int main()
     struct Robot myrobot;
     robot_init(&myrobot);
     go_go_spiral(&myrobot);
-
-    print_coordinates(&myrobot);
-    print_room(myrobot.room);
+    print_room(&myrobot);
 
     return 0;
 }
 
 
 void robot_init(struct Robot *myrobot) {
+
+        // Addind the "walls"
+    uint8_t room_with_walls[MAXLENGTH][MAXWIDTH] = {
+        {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255},
+        {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+    };
     // Start position:
-    myrobot->x_pos = 0;
-    myrobot->y_pos = 0;
+    myrobot->x_pos = 1;
+    myrobot->y_pos = 1;
     myrobot->direction = 0;
     myrobot->fields_visited = 0;
     myrobot->cant_move = false;
-    for (int x = 0; x < MAXLENGTH; x++)
+    for (uint8_t x = 0; x < MAXLENGTH; x++)
     { // First, all fields are closed and we're going to open them while going through them
-        for (int y = 0; y < MAXWIDTH; y++)
+        for (uint8_t y = 0; y < MAXWIDTH; y++)
         {
-            myrobot->room[x][y] = true;
+            myrobot->room[x][y] = room_with_walls[x][y];
         }
     }
     // We assume that we always begin at 0,0 coordinates, and this field is of course free
     set_field_visited(myrobot);
-    print_coordinates(myrobot);
     get_free_directions_from_Nils_sensors(myrobot);
+    get_best_directions(myrobot);
 }
 
 // The function will be replaced by Nils' function, for now just for virtual testing:
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
 {
     // Addind the "walls"
-    bool room[MAXLENGTH + 2][MAXWIDTH + 2] = {
+    uint8_t room[MAXLENGTH][MAXWIDTH] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
-        {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
-        {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+        {0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0},
+        {0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0},
+        {0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0},
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
@@ -91,17 +108,9 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     };
-    uint8_t x_pos = myrobot->x_pos + 1;
-    uint8_t y_pos = myrobot->y_pos + 1;
+    uint8_t x_pos = myrobot->x_pos;
+    uint8_t y_pos = myrobot->y_pos;
 
-    // for (int x = 0; x < (MAXLENGTH + 2); x++)
-    // {
-    //     for (int y = 0; y < (MAXWIDTH + 2); y++)
-    //     {
-    //         printf("%d", room[y][x]);
-    //     }
-    //     printf("\n");
-    // }
     switch (myrobot->direction)
     {
     case 0:
@@ -109,44 +118,24 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
         myrobot->free_directions[1] = room[x_pos][y_pos + 1];
         myrobot->free_directions[2] = room[x_pos - 1][y_pos];
         myrobot->free_directions[3] = room[x_pos][y_pos - 1];
-
-        myrobot->free_directions[0] = myrobot->free_directions[0] && myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
-        myrobot->free_directions[1] = myrobot->free_directions[1] && myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
-        myrobot->free_directions[2] = myrobot->free_directions[2] && myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
-        myrobot->free_directions[3] = myrobot->free_directions[3] && myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
         break;
     case 1:
         myrobot->free_directions[0] = room[x_pos][y_pos + 1];
         myrobot->free_directions[1] = room[x_pos - 1][y_pos];
         myrobot->free_directions[2] = room[x_pos][y_pos - 1];
         myrobot->free_directions[3] = room[x_pos + 1][y_pos];
-
-        myrobot->free_directions[0] = myrobot->free_directions[0] && myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
-        myrobot->free_directions[1] = myrobot->free_directions[1] && myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
-        myrobot->free_directions[2] = myrobot->free_directions[2] && myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
-        myrobot->free_directions[3] = myrobot->free_directions[3] && myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
         break;
     case 2:
         myrobot->free_directions[0] = room[x_pos - 1][y_pos];
         myrobot->free_directions[1] = room[x_pos][y_pos - 1];
         myrobot->free_directions[2] = room[x_pos + 1][y_pos];
         myrobot->free_directions[3] = room[x_pos][y_pos + 1];
-
-        myrobot->free_directions[0] = myrobot->free_directions[0] && myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
-        myrobot->free_directions[1] = myrobot->free_directions[1] && myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
-        myrobot->free_directions[2] = myrobot->free_directions[2] && myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
-        myrobot->free_directions[3] = myrobot->free_directions[3] && myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
         break;
     case 3:
         myrobot->free_directions[0] = room[x_pos][y_pos - 1];
         myrobot->free_directions[1] = room[x_pos + 1][y_pos];
         myrobot->free_directions[2] = room[x_pos][y_pos + 1];
         myrobot->free_directions[3] = room[x_pos - 1][y_pos];
-
-        myrobot->free_directions[0] = myrobot->free_directions[0] && myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
-        myrobot->free_directions[1] = myrobot->free_directions[1] && myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
-        myrobot->free_directions[2] = myrobot->free_directions[2] && myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
-        myrobot->free_directions[3] = myrobot->free_directions[3] && myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
         break;
     default:
         break;
@@ -162,9 +151,43 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
     }
 }
 
+void get_best_directions(struct Robot *myrobot) {
+
+    switch (myrobot->direction)
+    {
+    case 0:
+        myrobot->best_directions[0] = myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
+        myrobot->best_directions[1] = myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
+        myrobot->best_directions[2] = myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
+        myrobot->best_directions[3] = myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
+        break;
+    case 1:
+        myrobot->best_directions[0] = myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
+        myrobot->best_directions[1] = myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
+        myrobot->best_directions[2] = myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
+        myrobot->best_directions[3] = myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
+        break;
+    case 2:
+        myrobot->best_directions[0] =  myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
+        myrobot->best_directions[1] =  myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
+        myrobot->best_directions[2] =  myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
+        myrobot->best_directions[3] =  myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
+        break;
+    case 3:
+        myrobot->best_directions[0] = myrobot->room[myrobot->x_pos][myrobot->y_pos - 1];
+        myrobot->best_directions[1] = myrobot->room[myrobot->x_pos + 1][myrobot->y_pos];
+        myrobot->best_directions[2] = myrobot->room[myrobot->x_pos][myrobot->y_pos + 1];
+        myrobot->best_directions[3] = myrobot->room[myrobot->x_pos - 1][myrobot->y_pos];
+        break;
+    default:
+        break;
+    }
+}
+
 void move_forward(struct Robot *myrobot)
 {
     char scan;
+    scanf("%c", &scan);
     switch (myrobot->direction)
     {
     case 0:
@@ -186,9 +209,7 @@ void move_forward(struct Robot *myrobot)
     // After we moved, we want to set the field as visited and get the data from the sensors
     set_field_visited(myrobot);
     printf("I moved forward!\n");
-    print_room(myrobot->room);
-    get_free_directions_from_Nils_sensors(myrobot);
-    scanf("%c", &scan);
+    print_room(myrobot);
 }
 void turn_right(struct Robot *myrobot)
 {
@@ -197,8 +218,7 @@ void turn_right(struct Robot *myrobot)
     else
         myrobot->direction++;
     // physical_turn_right_func_from_Peter_and_Michael();
-    printf("I turned right!\n");
-    get_free_directions_from_Nils_sensors(myrobot);
+    //printf("I turned right!\n");
 }
 void turn_left(struct Robot *myrobot)
 {
@@ -212,50 +232,54 @@ void turn_left(struct Robot *myrobot)
 }
 void go_go_spiral(struct Robot *myrobot)
 {
+    uint8_t pref_dir = find_min_index(myrobot->best_directions, 4);
+
     while ((myrobot->cant_move) == false) 
     {
-        while ((myrobot->free_directions[3] == false) && ((myrobot->cant_move) == false))
-        {
-            if (myrobot->free_directions[0] == true)
-            {
-                move_forward(myrobot);
-            }
-            else
-            {
-                while ((myrobot->free_directions[0] != true) && ((myrobot->cant_move) == false))
-                    turn_right(myrobot);
-                move_forward(myrobot);
-            }
+        if (myrobot->fields_visited == 9){
+
         }
-        if ((myrobot->cant_move) == true) {
-            return;
-        }           
-        turn_left(myrobot);
+        while (myrobot->free_directions[pref_dir] != true)
+            {
+            myrobot->best_directions[pref_dir] = 255;
+            pref_dir = find_min_index(myrobot->best_directions, 4);
+            }
+        for(int i=0;i<pref_dir;i++) {
+            turn_right(myrobot);
+        }
         move_forward(myrobot);
+        get_free_directions_from_Nils_sensors(myrobot);
+        get_best_directions(myrobot);
+        pref_dir = find_min_index(myrobot->best_directions, 4);
     }
 }
 
-
 void set_field_visited(struct Robot *myrobot)
 {
-    myrobot->room[myrobot->x_pos][myrobot->y_pos] = false;
+    myrobot->room[myrobot->x_pos][myrobot->y_pos]++;
     myrobot->fields_visited++;
 }
 
-void print_coordinates(struct Robot *myrobot)
-{
-    printf("x: %d\ny: %d\ndir: %d\nvis_fields: %d\n", 
-    myrobot->x_pos, myrobot->y_pos, myrobot->direction, myrobot->fields_visited);
-}
-void print_room(bool room[MAXLENGTH][MAXWIDTH])
+void print_room(struct Robot *myrobot)
 {
     for (int x = 0; x < MAXLENGTH; x++)
     {
         for (int y = 0; y < MAXWIDTH; y++)
         {
-            printf("%d", room[y][x]);
+            printf("%x ", myrobot->room[y][x]);
         }
         printf("\n");
     }
+    printf("Fields visited: %d", myrobot->fields_visited);
 }
 
+uint8_t find_min_index(uint8_t arr[], uint8_t size) {
+    uint8_t min = 0;
+
+    for (uint8_t i = 0; i < size; i++) {
+        if (arr[i] < arr[min]) {
+            min = i;
+        }
+    }
+    return min;
+}
