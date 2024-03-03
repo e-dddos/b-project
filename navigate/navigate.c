@@ -27,8 +27,10 @@ struct Robot
 
     // create a room array:
     uint8_t room[MAXLENGTH][MAXWIDTH];
+    uint8_t steps_done;
     uint8_t fields_visited;
     bool cant_move;
+    bool finished;
 };
 void robot_init(struct Robot *myrobot);
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot);
@@ -44,7 +46,6 @@ uint8_t find_min_index(uint8_t arr[], uint8_t size);
 
 int main()
 {
-
     struct Robot myrobot;
     robot_init(&myrobot);
     go_go_spiral(&myrobot);
@@ -75,8 +76,10 @@ void robot_init(struct Robot *myrobot) {
     myrobot->x_pos = 1;
     myrobot->y_pos = 1;
     myrobot->direction = 0;
+    myrobot->steps_done = 0;
     myrobot->fields_visited = 0;
     myrobot->cant_move = false;
+    myrobot->finished = false;
     for (uint8_t x = 0; x < MAXLENGTH; x++)
     { // First, all fields are closed and we're going to open them while going through them
         for (uint8_t y = 0; y < MAXWIDTH; y++)
@@ -96,9 +99,9 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
     // Addind the "walls"
     uint8_t room[MAXLENGTH][MAXWIDTH] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0},
-        {0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0},
-        {0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0},
+        {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+        {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+        {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
         {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
@@ -110,6 +113,17 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
     };
     uint8_t x_pos = myrobot->x_pos;
     uint8_t y_pos = myrobot->y_pos;
+
+    uint8_t free_fields = 0;
+    for (int x=0;x<MAXLENGTH;x++) {
+        for (int y=0;y<MAXWIDTH;y++) {
+            free_fields = free_fields + room[x][y];
+        }
+    }
+    if (myrobot->fields_visited >= free_fields) {
+        myrobot->finished = true;
+        return;
+    }
 
     switch (myrobot->direction)
     {
@@ -234,9 +248,9 @@ void go_go_spiral(struct Robot *myrobot)
 {
     uint8_t pref_dir = find_min_index(myrobot->best_directions, 4);
 
-    while ((myrobot->cant_move) == false) 
+    while ((myrobot->cant_move == false) && (myrobot->finished == false)) 
     {
-        if (myrobot->fields_visited == 9){
+        if (myrobot->steps_done == 32){
 
         }
         while (myrobot->free_directions[pref_dir] != true)
@@ -256,8 +270,11 @@ void go_go_spiral(struct Robot *myrobot)
 
 void set_field_visited(struct Robot *myrobot)
 {
+    if (myrobot->room[myrobot->x_pos][myrobot->y_pos] == 0) {
+            myrobot->fields_visited++;
+    } 
     myrobot->room[myrobot->x_pos][myrobot->y_pos]++;
-    myrobot->fields_visited++;
+    myrobot->steps_done++;
 }
 
 void print_room(struct Robot *myrobot)
@@ -270,7 +287,7 @@ void print_room(struct Robot *myrobot)
         }
         printf("\n");
     }
-    printf("Fields visited: %d", myrobot->fields_visited);
+    printf("Fields visited: %d\nSteps done: %d\n", myrobot->fields_visited, myrobot->steps_done);
 }
 
 uint8_t find_min_index(uint8_t arr[], uint8_t size) {
