@@ -1,3 +1,4 @@
 /navigate/.vscode
-*.dSYM
+/navigate/navigate.dSYM
+/navigate/te
 *.o
