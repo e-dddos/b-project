@@ -1,7 +1,12 @@
+/*
+    Test the algorithm by adding obstacles (zeros) in the room array in the 
+    get_free_directions_from_Nils_sensors() function
+*/
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-// Set the max room size
+// Set the max room size, for now don't change.
 #define MAXLENGTH 12
 #define MAXWIDTH 12
 
