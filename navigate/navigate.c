@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 // Set the max room size
 #define MAXLENGTH 12
 #define MAXWIDTH 12
@@ -10,7 +9,8 @@ struct Robot
 {
     uint8_t x_pos;
     uint8_t y_pos;
-    /*Which direction the robot is looking at (When looking from the starting perspective).
+    /*Which direction the robot is looking at (When standing in the left down corner,
+     the wall is on the left).
     0 - forward
     1 - to the right
     2 - back
@@ -32,6 +32,7 @@ struct Robot
     bool cant_move;
     bool finished;
 };
+
 void robot_init(struct Robot *myrobot);
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot);
 void get_best_directions(struct Robot *myrobot);
@@ -47,6 +48,7 @@ int main()
 {
     struct Robot myrobot;
     robot_init(&myrobot);
+    printf("Press Enter to make a step\n");
     go_go_spiral(&myrobot);
     print_room(&myrobot);
 
@@ -55,23 +57,6 @@ int main()
 
 void robot_init(struct Robot *myrobot)
 {
-
-    // Addind the "walls"
-    uint8_t room_with_walls[MAXLENGTH][MAXWIDTH];
-    for (int x = 0; x < MAXLENGTH; x++)
-    {
-        for (int y = 0; y < MAXWIDTH; y++)
-        {
-            if ((x == 0) || (x == (MAXLENGTH - 1)) || (y == 0) || (y == (MAXWIDTH - 1)))
-            {
-                room_with_walls[x][y] = 255;
-            }
-            else
-            {
-                room_with_walls[x][y] = 0;
-            }
-        }
-    }
     // Start position:
     myrobot->x_pos = 1;
     myrobot->y_pos = 1;
@@ -80,11 +65,22 @@ void robot_init(struct Robot *myrobot)
     myrobot->fields_visited = 0;
     myrobot->cant_move = false;
     myrobot->finished = false;
-    for (uint8_t x = 0; x < MAXLENGTH; x++)
-    { // First, all fields are closed and we're going to open them while going through them
-        for (uint8_t y = 0; y < MAXWIDTH; y++)
+
+    /*Romm array, the walls have the value 0xFF, this will be important later,
+    the not yet discovered fields have the value 0*/
+    //Create the room array with the walls:
+    for (int x = 0; x < MAXLENGTH; x++)
+    {
+        for (int y = 0; y < MAXWIDTH; y++)
         {
-            myrobot->room[x][y] = room_with_walls[x][y];
+            if ((x == 0) || (x == (MAXLENGTH - 1)) || (y == 0) || (y == (MAXWIDTH - 1)))
+            {
+                myrobot->room[x][y] = 255;
+            }
+            else
+            {
+                myrobot->room[x][y] = 0;
+            }
         }
     }
     // We assume that we always begin at 0,0 coordinates, and this field is of course free
@@ -93,10 +89,10 @@ void robot_init(struct Robot *myrobot)
     get_best_directions(myrobot);
 }
 
-// The function will be replaced by Nils' function, for now just for virtual testing:
+// The function will be replaced by Nils' function, for now just for virtual testing
 void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
 {
-    // Addind the "walls"
+    // Test the algorithm by adding obstacles (zeros) in the room array here:
     uint8_t room[MAXLENGTH][MAXWIDTH] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0},
@@ -113,8 +109,8 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
     };
     uint8_t x_pos = myrobot->x_pos;
     uint8_t y_pos = myrobot->y_pos;
-
     uint8_t free_fields = 0;
+    //Count how many free fields there are to know later that we're finished
     for (int x = 0; x < MAXLENGTH; x++)
     {
         for (int y = 0; y < MAXWIDTH; y++)
@@ -122,12 +118,14 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
             free_fields = free_fields + room[x][y];
         }
     }
+    //Check whether we finished the room:
     if (myrobot->fields_visited >= free_fields)
     {
         myrobot->finished = true;
         return;
     }
 
+    //Get the free directions:
     switch (myrobot->direction)
     {
     case 0:
@@ -157,6 +155,7 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
     default:
         break;
     }
+    //If there's no free direction, we can't move:
     if ((myrobot->free_directions[0] == false) &&
         (myrobot->free_directions[1] == false) &&
         (myrobot->free_directions[2] == false) &&
@@ -171,6 +170,8 @@ void get_free_directions_from_Nils_sensors(struct Robot *myrobot)
     }
 }
 
+/*We check how many times the neighboured fields were already visired and store that values in 
+the myrobot->best_directions array*/
 void get_best_directions(struct Robot *myrobot)
 {
 
@@ -209,6 +210,7 @@ void move_forward(struct Robot *myrobot)
 {
     char scan;
     scanf("%c", &scan);
+    //We check in which direction we're going and move through our room array
     switch (myrobot->direction)
     {
     case 0:
@@ -227,7 +229,7 @@ void move_forward(struct Robot *myrobot)
         break;
     }
     // physical_move_forward_func_from_Peter_and_Michael();
-    // After we moved, we want to set the field as visited and get the data from the sensors
+    // After we moved, we want to set the field as visited
     set_field_visited(myrobot);
     printf("I moved forward!\n");
     print_room(myrobot);
@@ -249,22 +251,23 @@ void turn_left(struct Robot *myrobot)
         myrobot->direction--;
     // physical_turn_left_func_from_Peter_and_Michael();
     printf("I turned left!\n");
-    get_free_directions_from_Nils_sensors(myrobot);
 }
 void go_go_spiral(struct Robot *myrobot)
 {
+    /*We want to move to the field that was visited less times than the others, so our 
+    preferred direction is the minimum of our best_directions array*/
     uint8_t pref_dir = find_min_index(myrobot->best_directions, 4);
 
     while ((myrobot->cant_move == false) && (myrobot->finished == false))
     {
-        if (myrobot->steps_done == 32)
-        {
-        }
+        /*As long as the preferred direction is not blocked, 
+        we check the other directions, giving the blocked direction the 0xFF value*/
         while (myrobot->free_directions[pref_dir] != true)
         {
             myrobot->best_directions[pref_dir] = 255;
             pref_dir = find_min_index(myrobot->best_directions, 4);
         }
+        //turn in our preferred direction:
         for (int i = 0; i < pref_dir; i++)
         {
             turn_right(myrobot);
@@ -278,6 +281,7 @@ void go_go_spiral(struct Robot *myrobot)
 
 void set_field_visited(struct Robot *myrobot)
 {
+    //If the filed has the value 0, means we visited a new field
     if (myrobot->room[myrobot->x_pos][myrobot->y_pos] == 0)
     {
         myrobot->fields_visited++;
