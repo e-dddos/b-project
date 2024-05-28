@@ -5,7 +5,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude
 
 # Define the target executable
-TARGET = main
+TARGET = app.o
 
 # Define the source directories
 SRC_DIR = src

@@ -1,5 +1,6 @@
 #include "navigate.h"
 #include "ultrasonic.h"
+#include "uart.h"
 
 void robot_init(struct Robot *myrobot)
 {
