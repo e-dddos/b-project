@@ -1,6 +1,4 @@
 #include "navigate.h"
-//#include "ultrasonic.h"
-#include <stdio.h>
 
 int main()
 {

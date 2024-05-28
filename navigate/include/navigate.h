@@ -13,11 +13,11 @@ struct Robot
     uint8_t x_pos;
     uint8_t y_pos;
     /*Which direction the robot is looking at (When standing in the left down corner,
-     the wall is on the left).
-    0 - forward
-    1 - to the right
-    2 - back
-    3 - to the left*/
+     the wall is on the left, forward direction is north).
+    0 - north
+    1 - east
+    2 - south
+    3 - west*/
     uint8_t direction;
     /*Information about next free fields in all 4 directions
     (Looking in the direction where the robot is looking). true = field is free, false - there's an obstacle
