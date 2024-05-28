@@ -1,3 +1,4 @@
 navigate/.vscode/
 navigate/navigate.dSYM/
 *.o
+*.DS_Store

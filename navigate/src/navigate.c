@@ -1,4 +1,5 @@
 #include "navigate.h"
+#include "ultrasonic.h"
 
 void robot_init(struct Robot *myrobot)
 {
@@ -6,8 +7,6 @@ void robot_init(struct Robot *myrobot)
     Test the algorithm by adding obstacles (zeros) in the room array in the 
     get_free_directions_from_Nils_sensors() function
 */
-
-
 
     // Start position:
     myrobot->x_pos = 1;
